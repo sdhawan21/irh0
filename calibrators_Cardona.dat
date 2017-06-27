@@ -1,6 +1,6 @@
 # SN       mJ    err    mu    err     M_J   err E(B-V) dm15  Host   Hostmorph  morph  MW-A_J    Reference     Sample
 SN2001el 12.837 0.022 31.30  0.06  -18.463 0.064 0.25  1.08 NGC1448 SAcd        4.5  0.009801  Krisciunas2004  other
-SN2002fk 13.749 0.010 32.513 0.07  -18.764 0.071 0.01  1.20 NGC1309 SA(s)bc     3.5  0.027864  Cartier2014     other
+SN2002fk 13.749 0.010 32.51  0.07  -18.764 0.071 0.01  1.20 NGC1309 SA(s)bc     3.5  0.027864  Cartier2014     other
 SN2003du 14.325 0.056 32.87  0.09  -18.545 0.106 0.00  1.02 UGC9391 SBdm        5.0  0.006561  Stanishev2007   other
 SN2005cf 13.791 0.025 32.25  0.12  -18.459 0.123 0.09  1.10 NGC5917 Sb          3.0  0.068121  Wang2009        other
 SN2007af 13.446 0.003 31.76  0.06  -18.314 0.060 0.17  1.17 NGC5584 SAB(rs)cd   4.5  0.027216  Contreras2010    CSP
