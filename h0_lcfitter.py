@@ -7,13 +7,15 @@ import matplotlib.pyplot as plt
 import sys
 import glob
 import snpy	#required for the pymc GP implementation
+import matplotlib.gridspec as gridspec
+
 
 calib = glob.glob('calib_lcs/*.dat')
 hflow = glob.glob('hflow_lcs/*.dat')
 
 #a dictionary with parameters to fit and write to a file the results for the calibrators and the 
 ##hubble flow
-input_params = {'fithubble':False, 'writehubble':False, 'fitcalib':True, 'writecalib':False}
+input_params = {'fithubble':True, 'writehubble':False, 'fitcalib':False, 'writecalib':False}
 
 def fit_multiple_gps(gl = calib, printres=True, plotlc=True, out_direc='paper_plots/hflow/', out_direc_fits='hflow_lcs/fits/'):
 	"""
@@ -58,32 +60,33 @@ def fit_tuned(arr, direc = 'hflow_lcs/fits/', plotlc=True):
 	lf = snpy.get_sn('hflow_lcs/spl/SN2006lf.dat')
 	lf.J.template(method='gp', scale=5., amp = lf.J.mag.std(), diff_degree=3, Nboot=500)
 	arr.append([lf.name, lf.z, lf.J.Mmax - 0.81*lf.EBVgal, lf.J.e_Mmax])
-	lf.save(direc+lf.name+'.snpy')
+	if plotlc:
+		do_gpfit_plot(lf)		
+
+	#lf.save(direc+lf.name+'.snpy')
 
 
 	eq = snpy.get_sn('hflow_lcs/spl/SN2005eq.dat')
 	eq.J.template(method='gp', scale=10., amp = eq.J.mag.std()/2., diff_degree=3., Nboot=500)
 	arr.append([eq.name, eq.z, eq.J.Mmax - 0.81*eq.EBVgal, eq.J.e_Mmax])
-	eq.save(direc+eq.name+'.snpy')
+	if plotlc:
+		do_gpfit_plot(eq)
+	#eq.save(direc+eq.name+'.snpy')
 
-
+	#since Barone-Nugent et al. 2012 already correct for MW extinction, we dont correct these objects
 	ufj = snpy.get_sn('hflow_lcs/spl/ptf10ufj.dat')
 	ufj.J.template(method='gp', scale=5., amp = ufj.J.mag.std()*1.5, diff_degree=4, Nboot=500)
-	arr.append([ufj.name, ufj.z, ufj.J.Mmax - 0.81*ufj.EBVgal, ufj.J.e_Mmax])
-	ufj.save(direc+ufj.name+'.snpy')
+	arr.append([ufj.name, ufj.z, ufj.J.Mmax, ufj.J.e_Mmax])
+	if plotlc:
+		do_gpfit_plot(ufj)
+	#ufj.save(direc+ufj.name+'.snpy')
 
 	mwb = snpy.get_sn('hflow_lcs/spl/ptf10mwb.dat')
 	mwb.J.template(method='gp', scale=10., amp = mwb.J.mag.std()/2., diff_degree=3, Nboot=500)
-	arr.append([mwb.name, mwb.z, mwb.J.Mmax - 0.81*mwb.EBVgal, mwb.J.e_Mmax])
-	mwb.save(direc+mwb.name+'.snpy')
-
-
+	arr.append([mwb.name, mwb.z, mwb.J.Mmax, mwb.J.e_Mmax])
 	if plotlc:
-		do_gpfit_plot(lf)		
-		do_gpfit_plot(eq)
-		do_gpfit_plot(ufj)
 		do_gpfit_plot(mwb)
-
+	#mwb.save(direc+mwb.name+'.snpy')
 	return arr
 
 def do_gpfit_plot(sn, direc = "paper_plots/hflow/", n=100, xy=(.08, .1)):
@@ -95,12 +98,15 @@ def do_gpfit_plot(sn, direc = "paper_plots/hflow/", n=100, xy=(.08, .1)):
 		n: number of draws
 	Output: PDF figure with the name "sn.name+.pdf"
 	"""
-
+	sn.Tmax = sn.J.Tmax
 	#setup the plotting environment from the data and the fit
-	fig = sn.J.plot(use_model=False)
-	#set the title to be blank
-	fig.title("")
+	gs = gridspec.GridSpec(2, 1,height_ratios=[4, 1])
 
+	#plot for the lightcurve
+	fig = plt.figure(figsize=(12,8))
+	plt.subplot(gs[0]) 
+	plt.ylabel("Magnitude (mag)", fontsize=20)
+	plt.errorbar(sn.J.MJD - sn.Tmax, sn.J.mag, sn.J.e_mag, fmt='go', alpha=.5)
 	#fix the y-axis limits based on the observations (to no "cutoff" the peak of the fit)
 	plt.ylim(sn.J.mag.max() + 0.5, sn.J.mag.min() - 0.5)
 
@@ -112,7 +118,9 @@ def do_gpfit_plot(sn, direc = "paper_plots/hflow/", n=100, xy=(.08, .1)):
 
 	#interpolate the data
 	mlc = sn.J.interp(t)[0]
-
+    
+	interp_mags = sn.J.interp(sn.J.MJD)[0]
+    
 	#draw n number of realisations from the fit and the error region (n is set to 100)
 	ts = []
 	for i in range(n):
@@ -124,22 +132,50 @@ def do_gpfit_plot(sn, direc = "paper_plots/hflow/", n=100, xy=(.08, .1)):
 	#calculate the standard deviation from the draws
 	slc = np.std(ts, axis=0)
 
-	#annotate the SN name
 	
 	#use fill_between for plotting
-	fig.axes[1].fill_between(t, mlc-slc, mlc+slc, alpha=0.5)
-	fig.draw()
+	plt.fill_between(t-sn.Tmax, mlc-slc, mlc+slc, alpha=0.5)
+	frame1 = plt.gca()
+	for xlabel_i in frame1.axes.get_xticklabels():
+		xlabel_i.set_visible(False)
+		xlabel_i.set_fontsize(0.0)
+	plt.subplot(gs[1])
+	res = sn.J.mag - interp_mags
+	new_slc = sn.J.e_mag
+	plt.errorbar(sn.J.MJD-sn.Tmax,res, new_slc, fmt='go', alpha=0.5)
+	plt.plot(t-sn.Tmax, np.zeros_like(t))
+	print "Res done"
+	plt.ylim(min((res-new_slc))-0.1, max(res+new_slc)+0.1)
+	plt.ylabel("Res", fontsize=20)
+	plt.xlabel("Days from J-band maximum")
+	gs.update(hspace=0.05)
 	plt.savefig(direc+sn.name+'.pdf')
 
 
-	
-
+def do_kcorr(snfile, ext=False, Tmax=0, dm15=1.1):
+	"""
+	A function to calculate the K-corrections for an SN from the raw photometry
+	Input: The SN file
+	Optional: If there is a B-band light curve continue with ext = False
+	else, input the Tmax and the dm15 for the SN (from other sources in the literature)
+	"""
+	sn = snpy.get_sn(snfile)
+	sn.J.template(method='gp')
+	if ext:
+		sn.Tmax = tmax
+		sn.dm15 = dm15
+	else:
+		sn.B.template(method='gp')
+		sn.Tmax = sn.B.Tmax
+		sn.dm15 = sn.B.dm15
+	sn.kcorr(['J'])
+	return sn.ks['J']
 
 def main():
 	"""
 	Main function to do the fits and make output files
 	"""
-	
+	#set the conditionals for the calibrators and the hubble flow 
 	if input_params['fitcalib']:
 		calib_fits = fit_multiple_gps(gl=calib, out_direc='paper_plots/calib/', out_direc_fits='calib_lcs/fits/')
 
@@ -151,7 +187,7 @@ def main():
 		hflow_fits = list(fit_multiple_gps(gl=hflow))
 		
 		#fit the objects that need the parameters to be changed
-		hflow_fits = fit_tuned(hflow_fits)
+		hflow_fits = fit_tuned([])
 		hflow_fits = np.array(hflow_fits)
 
 		#sort by the SN name
