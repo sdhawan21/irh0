@@ -15,7 +15,7 @@ hflow = glob.glob('hflow_lcs/*.dat')
 
 #a dictionary with parameters to fit and write to a file the results for the calibrators and the 
 ##hubble flow
-input_params = {'fithubble':True, 'writehubble':False, 'fitcalib':False, 'writecalib':False}
+input_params = {'fithubble':True, 'writehubble':False, 'fitcalib':True, 'writecalib':False}
 
 def fit_multiple_gps(gl = calib, printres=True, plotlc=True, out_direc='paper_plots/hflow/', out_direc_fits='hflow_lcs/fits/'):
 	"""
